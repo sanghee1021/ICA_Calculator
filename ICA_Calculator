@@ -1,0 +1,83 @@
+from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QMainWindow, QMessageBox
+import sys
+import pandas as pd
+
+
+class LARRSWidget(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setGeometry(600, 300, 800, 300)
+        self.center()
+        self.setWindowTitle('LARRS Index of Cognitive Activity (ICA) Calculator')
+
+        #Grid Layout
+        grid = QtWidgets.QGridLayout()
+        widget = QtWidgets.QWidget(self)
+        self.setCentralWidget(widget)
+        widget.setLayout(grid)
+
+        #Import CSV Button
+        btn1 = QtWidgets.QPushButton('Import CSV', self)
+        btn1.resize(btn1.sizeHint())
+        btn1.clicked.connect(self.getCSV)
+        grid.addWidget(btn1, 1, 0)
+
+        #About Button
+        btn2 = QtWidgets.QPushButton('About...', self)
+        btn2.resize(btn2.sizeHint())
+        btn2.clicked.connect(self.about)
+        grid.addWidget(btn2, 1, 1)
+
+        self.show()
+
+    def getCSV(self):
+        settings = QtCore.QSettings()
+        path = settings.value("Paths/csvfile", QtCore.QDir.rootPath())
+        filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', path, '*.csv')
+        if filename:
+            finfo = QtCore.QFileInfo(filename)
+            settings.setValue("Paths/csvfile", finfo.absoluteDir().absolutePath())
+            print (filename)
+
+            df = pd.read_csv(str(filename))
+
+            #Changing the column headers to avoid crashes.
+            df.rename(columns={'Scaled ICA (for second)': 'ica', 'Start Time of Current Second (secs)': 'time'}, inplace=True)
+
+            # The following two lines remove 0 and -99.
+            df = df[df.ica != 0]
+            df = df[df.ica != -99]
+
+            #Mean of ICA
+            mean = df['ica'].mean()
+            print("Mean ICA:", mean)
+
+            #Peak of ICA
+            max = df['ica'].max()
+            print("Peak ICA:", max)
+
+    def about(self):
+        QMessageBox.about(self, "About...", "'LARRS Index of Cognitive Activity (ICA) Calculator' was created using Python 3.7 (64-bit) by Sanghee Moon (2019).")
+
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QtWidgets.QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
+
+def main():
+    app = QtWidgets.QApplication(sys.argv)
+    QtCore.QCoreApplication.setOrganizationName("SangheeMoon") #This needs to remember the last directory.
+    QtCore.QCoreApplication.setOrganizationDomain("SangheeMoon.com") #This needs to remember the last directory.
+    QtCore.QCoreApplication.setApplicationName("Moon") #This needs to remember the last directory.
+    w = LARRSWidget()
+    sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()
